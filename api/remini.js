@@ -2,25 +2,41 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 module.exports = async (req, res) => {
-  // Handle CORS
+  // CORS Headers - Must be set first
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
+  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // Only allow POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      error: 'Method not allowed',
+      allowedMethod: 'POST' 
+    });
   }
 
+  let imageData;
+
   try {
-    const { imageData } = req.body;
+    // Parse body if needed
+    if (typeof req.body === 'string') {
+      const parsed = JSON.parse(req.body);
+      imageData = parsed.imageData;
+    } else {
+      imageData = req.body?.imageData;
+    }
 
     if (!imageData) {
-      return res.status(400).json({ error: 'No image data provided' });
+      return res.status(400).json({ 
+        error: 'No image data provided',
+        received: typeof req.body 
+      });
     }
 
     console.log('Processing image...');
@@ -29,6 +45,7 @@ module.exports = async (req, res) => {
     const base64Data = imageData.replace(/^data:image\/[a-z]+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
+    console.log('Buffer size:', buffer.length);
     console.log('Uploading to Catbox...');
 
     // Upload to Catbox
@@ -52,7 +69,7 @@ module.exports = async (req, res) => {
     console.log('Catbox URL:', imageUrl);
 
     if (!imageUrl || !imageUrl.startsWith('http')) {
-      throw new Error('Failed to upload to Catbox');
+      throw new Error('Failed to upload to Catbox: ' + imageUrl);
     }
 
     console.log('Removing background...');
@@ -61,9 +78,13 @@ module.exports = async (req, res) => {
     const removeBgUrl = `https://api.elrayyxml.web.id/api/tools/removebg?url=${encodeURIComponent(imageUrl)}`;
     
     const removeBgResponse = await axios.get(removeBgUrl, {
-      timeout: 60000
+      timeout: 60000,
+      validateStatus: function (status) {
+        return status < 500; // Accept any status less than 500
+      }
     });
 
+    console.log('Remove BG Status:', removeBgResponse.status);
     console.log('Remove BG Response:', removeBgResponse.data);
 
     if (removeBgResponse.data && removeBgResponse.data.result) {
@@ -73,15 +94,21 @@ module.exports = async (req, res) => {
         originalUrl: imageUrl
       });
     } else {
-      throw new Error('Invalid response from remove background API');
+      throw new Error('Invalid response from remove background API: ' + JSON.stringify(removeBgResponse.data));
     }
 
   } catch (error) {
-    console.error('Error details:', error.response?.data || error.message);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
     return res.status(500).json({ 
       error: 'Failed to process image',
       details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stage: error.config?.url ? 'API call' : 'Processing',
+      timestamp: new Date().toISOString()
     });
   }
 };
