@@ -1,9 +1,9 @@
-const axios = require('axios');
-const FormData = require('form-data');
+import axios from 'axios';
+import FormData from 'form-data';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
       timeout: 30000
     });
 
-    const imageUrl = catboxResponse.data;
+    const imageUrl = catboxResponse.data.trim();
 
     if (!imageUrl || !imageUrl.startsWith('http')) {
       throw new Error('Failed to upload to Catbox');
@@ -71,4 +71,4 @@ module.exports = async (req, res) => {
       details: error.message 
     });
   }
-};
+}
