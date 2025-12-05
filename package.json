@@ -2,16 +2,12 @@
   "name": "removebg-backend",
   "version": "1.0.0",
   "description": "Backend API for background removal",
-  "main": "api/remini.js",
+  "type": "module",
   "scripts": {
     "start": "node api/remini.js"
   },
   "dependencies": {
     "axios": "^1.6.2",
-    "form-data": "^4.0.0",
-    "multer": "^1.4.5-lts.1"
-  },
-  "engines": {
-    "node": "18.x"
+    "form-data": "^4.0.0"
   }
 }
