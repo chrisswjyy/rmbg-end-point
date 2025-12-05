@@ -1,17 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/remini.js",
-      "use": "@vercel/node"
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 60
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/removebg",
-      "dest": "api/remini.js"
-    }
-  ],
+  },
   "headers": [
     {
       "source": "/api/(.*)",
